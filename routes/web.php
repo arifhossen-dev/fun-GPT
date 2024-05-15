@@ -3,16 +3,25 @@
 use App\AI\Chat;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
+    return view('roast');
+});
 
-    $chat = new Chat();
+Route::post('/roast',function (){
+    $attribute = request()->validate([
+        'topic' => ['required','string','min:2','max:50']
+    ]);
 
-    $poem = $chat
-        ->systemMessage('You are a poetic assistant, skilled in explaining complex programming concepts with creative flair.')
-        ->send('Compose a poem that explains the concept of recursion in programming.');
+    $prompt ="Please roast {$attribute['topic']} in a sarcastic tone.";
 
-    $newPoem = $chat->reply('Good, but can you make it much, much more silly.');
+    $mp3 = (new Chat())->send(message:$prompt,speech:true);
 
-    return view('welcome', ['poem' => $newPoem]);
+    $file = Storage::disk('local')->put('/roasts/'.md5($mp3).".mp3", $mp3);
+
+    return redirect('/')->with([
+        'file' => $file,
+        'flash' => 'Boom',
+    ]);
 });
