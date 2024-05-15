@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\AI\Chat;
+use App\AI\Assistant;
 use Illuminate\Console\Command;
-use function Laravel\Prompts\{text, info, spin, outro};
+use function Laravel\Prompts\{info, outro, spin, text};
 
 
 class ChatCommand extends Command
@@ -33,7 +33,7 @@ class ChatCommand extends Command
             required: true
         );
 
-        $chat = new Chat();
+        $chat = new Assistant();
 
         $response = spin(fn() => $chat->send($question), 'Sending request...');
 
@@ -45,6 +45,6 @@ class ChatCommand extends Command
             info($response);
         }
 
-        outro('Chat closed');
+        outro('Assistant closed');
     }
 }
