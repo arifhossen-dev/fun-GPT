@@ -3,6 +3,41 @@
 use App\AI\Assistant;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use OpenAI\Laravel\Facades\OpenAI;
+
+Route::get('replies', function () {
+    return view('replay');
+});
+
+Route::post('replies', function () {
+    $attributes = request()->validate([
+        'body' => ['required', 'string']
+    ]);
+
+    $response = OpenAI::chat()->create([
+        'model' => 'gpt-3.5-turbo-1106',
+        'messages' => [
+            ['role' => 'system', 'content' => 'You are a forum moderator who always response JSON.'],
+            [
+                'role' => 'system',
+                'content' => <<<EOT
+                    Pleas inspect the following text determine if it is spam.
+
+                    {$attributes['body']}
+
+                    Expected Response Example:
+
+                    {"is_spam":true|false}
+                EOT
+            ]
+        ],
+        'response_format' => ['type' => 'json_object'],
+    ])->choices[0]->message->content;
+
+    $response = json_decode($response);
+
+    return $response->is_spam ? 'THIS IS SPAM!' : 'VALID POST';
+});
 
 Route::get('/image', function () {
     return view('image', [
