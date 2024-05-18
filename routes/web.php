@@ -3,6 +3,7 @@
 use App\AI\Assistant;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use OpenAI\Laravel\Facades\OpenAI;
 
 Route::get('replies', function () {
@@ -36,7 +37,13 @@ Route::post('replies', function () {
 
     $response = json_decode($response);
 
-    return $response->is_spam ? 'THIS IS SPAM!' : 'VALID POST';
+    if ($response->is_spam) {
+        throw ValidationException::withMessages([
+            'body' => 'Spam was detected.'
+        ]);
+    }
+
+    return 'Redirect wherever is needed. Post was valid.';
 });
 
 Route::get('/image', function () {

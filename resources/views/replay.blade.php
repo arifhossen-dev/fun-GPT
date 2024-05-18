@@ -39,6 +39,15 @@
             Publish
         </button>
     </div>
+
+    @if($errors->any())
+        <ul>
+            @foreach($errors->all() as $errors)
+                <li class="text-sm text-red-500">{{$error}}</li>
+            @endforeach
+        </ul>
+
+    @endif
 </form>
 
 </body>
