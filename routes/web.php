@@ -3,7 +3,6 @@
 use App\AI\Assistant;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
 use OpenAI\Laravel\Facades\OpenAI;
 
 Route::get('replies', function () {
@@ -12,36 +11,38 @@ Route::get('replies', function () {
 
 Route::post('replies', function () {
     $attributes = request()->validate([
-        'body' => ['required', 'string']
+        'body' => [
+            'required',
+            'string',
+            function ($attribute, $value, $fail) {
+                $response = OpenAI::chat()->create([
+                    'model' => 'gpt-3.5-turbo-1106',
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'You are a forum moderator who always response JSON.'],
+                        [
+                            'role' => 'system',
+                            'content' => <<<EOT
+                                Pleas inspect the following text determine if it is spam.
+
+                                {$value}
+
+                                Expected Response Example:
+
+                                {"is_spam":true|false}
+                            EOT
+                        ]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                ])->choices[0]->message->content;
+
+                $response = json_decode($response);
+
+                if ($response->is_spam) {
+                    $fail('Spam was detected.');
+                }
+            }
+        ]
     ]);
-
-    $response = OpenAI::chat()->create([
-        'model' => 'gpt-3.5-turbo-1106',
-        'messages' => [
-            ['role' => 'system', 'content' => 'You are a forum moderator who always response JSON.'],
-            [
-                'role' => 'system',
-                'content' => <<<EOT
-                    Pleas inspect the following text determine if it is spam.
-
-                    {$attributes['body']}
-
-                    Expected Response Example:
-
-                    {"is_spam":true|false}
-                EOT
-            ]
-        ],
-        'response_format' => ['type' => 'json_object'],
-    ])->choices[0]->message->content;
-
-    $response = json_decode($response);
-
-    if ($response->is_spam) {
-        throw ValidationException::withMessages([
-            'body' => 'Spam was detected.'
-        ]);
-    }
 
     return 'Redirect wherever is needed. Post was valid.';
 });
