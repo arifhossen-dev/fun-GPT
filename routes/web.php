@@ -1,9 +1,9 @@
 <?php
 
 use App\AI\Assistant;
+use App\Rules\SpamFree;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use OpenAI\Laravel\Facades\OpenAI;
 
 Route::get('replies', function () {
     return view('replay');
@@ -14,33 +14,7 @@ Route::post('replies', function () {
         'body' => [
             'required',
             'string',
-            function ($attribute, $value, $fail) {
-                $response = OpenAI::chat()->create([
-                    'model' => 'gpt-3.5-turbo-1106',
-                    'messages' => [
-                        ['role' => 'system', 'content' => 'You are a forum moderator who always response JSON.'],
-                        [
-                            'role' => 'system',
-                            'content' => <<<EOT
-                                Pleas inspect the following text determine if it is spam.
-
-                                {$value}
-
-                                Expected Response Example:
-
-                                {"is_spam":true|false}
-                            EOT
-                        ]
-                    ],
-                    'response_format' => ['type' => 'json_object'],
-                ])->choices[0]->message->content;
-
-                $response = json_decode($response);
-
-                if ($response->is_spam) {
-                    $fail('Spam was detected.');
-                }
-            }
+            new SpamFree()
         ]
     ]);
 
