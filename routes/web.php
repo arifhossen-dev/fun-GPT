@@ -64,7 +64,7 @@ Route::post('/roast', function () {
 
     $prompt = "Please roast {$attribute['topic']} in a sarcastic tone.";
 
-    $mp3 = (new Assistant())->send(message: $prompt, speech: true);
+    $mp3 = (new Assistant())->send(message: $prompt);
 
     $file = Storage::disk('local')->put('/roasts/'.md5($mp3).".mp3", $mp3);
 

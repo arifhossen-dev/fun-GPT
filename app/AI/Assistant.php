@@ -8,7 +8,7 @@ class Assistant
 {
     protected array $messages = [];
 
-    public function __construct(array $messages)
+    public function __construct(array $messages = [])
     {
         $this->messages = $messages;
     }
@@ -35,7 +35,7 @@ class Assistant
         return $this->send($message);
     }
 
-    public function send(string $message, bool $speech): ?string
+    public function send(string $message, bool $speech = false): ?string
     {
         $this->addMessage($message, 'user');
 
