@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 Route::get('/assistant', function () {
-    $assistant = BotAssistant::create([config('openai.assistant.id')]);
+    $assistant = new BotAssistant(config('openai.assistant.id'));
 
     $messages = $assistant->createThread()
         ->write('Hello!')
