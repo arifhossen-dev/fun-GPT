@@ -2,7 +2,6 @@
 
 namespace App\AI;
 
-use OpenAI\Laravel\Facades\OpenAI;
 use OpenAI\Responses\Assistants\AssistantResponse;
 use OpenAI\Responses\Threads\Messages\ThreadMessageListResponse;
 
@@ -10,77 +9,61 @@ class BotAssistant
 {
     protected AssistantResponse $assistant;
     protected string $threadId;
+    protected OpenAIClient $client;
 
-    public function __construct(string $assistantId)
+    public function __construct(string $assistantId, ?AIClient $client = null)
     {
-        $this->assistant = OpenAI::assistants()->retrieve($assistantId);
-    }
+        $this->client = $client ?? new OpenAIClient();
 
-    public function educate(string $file): static
-    {
-        $file = OpenAI::files()->upload([
-            'purpose' => 'assistants',
-            'file' => fopen($file, 'rb')
-        ]);
-
-        OpenAI::assistants()->files()->create($this->assistant->id, ['file_id' => $file->id]);
-
-        return $this;
+        $this->assistant = $this->client->retrieveAssistant($assistantId);
     }
 
     public static function create(array $config = []): static
     {
-        $assistant = OpenAI::assistants()->create(array_merge_recursive([
+        $defaultConfig = [
             'model' => 'gpt-4-turbo-preview',
             'name' => 'Larvify Tutor',
             'instructions' => 'You are a helpful programming teacher.',
             'tools' => [
                 ['type' => 'retrieval']
             ],
-        ]), $config);
+        ];
+
+        $assistant = (new OpenAIClient())->createAssistant(array_merge_recursive($defaultConfig), $config);
 
         return new static($assistant->id);
     }
 
+    public function educate(string $file): static
+    {
+        $this->client->uploadFile($file, $this->assistant);
+
+        return $this;
+    }
+
     public function createThread(array $parameters = []): static
     {
-        $thread = OpenAI::threads()->create($parameters);
+        $thread = $this->client->createThread($parameters);
 
         $this->threadId = $thread->id;
 
         return $this;
     }
 
-    public function write(string $message): static
+    public function send(): ThreadMessageListResponse
     {
-        OpenAI::threads()->messages()->create($this->threadId, [
-            'role' => 'user',
-            'content' => $message,
-        ]);
-
-        return $this;
+        return $this->client->run($this->threadId, $this->assistant);
     }
 
     public function messages(): ThreadMessageListResponse
     {
-        return OpenAI::threads()->messages()->list($this->threadId);
+        return $this->client->messages($this->threadId);
     }
 
-    public function send(): ThreadMessageListResponse
+    public function write(string $message): static
     {
-        $run = OpenAI::threads()->runs()->create($this->threadId, [
-            'assistant_id' => $this->assistant->id,
-        ]);
+        $this->client->createMessages($message, $this->threadId);
 
-        do {
-            sleep(1);
-
-            $run = OpenAI::threads()->runs()->retrieve(
-                threadId: $run->threadId,
-                runId: $run->id
-            );
-        } while ($run->status !== 'completed');
-
-        return $this->messages();
+        return $this;
     }
 }
